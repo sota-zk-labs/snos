@@ -46,7 +46,7 @@ pub trait Storage: Sync + Send {
 /// and Starknet API types for convenience.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct Hash([u8; 32]);
+pub struct Hash(pub(crate) [u8; 32]);
 
 impl Hash {
     pub fn empty() -> Self {
@@ -197,7 +197,7 @@ where
     S: Storage,
     H: HashFunctionType,
 {
-    storage: Arc<Mutex<S>>,
+    pub(crate) storage: Arc<Mutex<S>>,
     _h: PhantomData<H>,
 }
 

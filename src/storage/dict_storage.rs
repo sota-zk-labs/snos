@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use futures_util::FutureExt;
-
+use serde::Serialize;
 use crate::storage::storage::{Storage, StorageError};
 
 /// A dictionary-based storage, for testing.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct DictStorage {
     pub db: HashMap<Vec<u8>, Vec<u8>>,
 }

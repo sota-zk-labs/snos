@@ -5,6 +5,7 @@ use std::{fs, path};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_vm::Felt252;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use serde_with::serde_as;
 use starknet_api::deprecated_contract_class::ContractClass as DeprecatedContractClass;
 
@@ -42,6 +43,27 @@ impl StarknetOsInput {
 
         Ok(())
     }
+
+    // pub fn to_json_string(&self) -> String {
+    //     let contract_state_commitment_info = json!({
+    //         "previous_root": self.contract_state_commitment_info.previous_root.to_string(),
+    //         "updated_root": self.contract_state_commitment_info.updated_root.to_string(),
+    //         "tree_height": self.contract_state_commitment_info.tree_height,
+    //         "commitment_facts": HashMap<Felt252, Vec<Felt252>>,
+    //     });
+    //     serde_json::to_string_pretty(json!({
+    //         "contract_state_commitment_info": CommitmentInfo,
+    //         "contract_class_commitment_info": CommitmentInfo,
+    //         "deprecated_compiled_classes": HashMap<Felt252, DeprecatedContractClass>,
+    //         "compiled_classes": HashMap<Felt252, CasmContractClass>,
+    //         "compiled_class_visited_pcs": HashMap<Felt252, Vec<Felt252>>,
+    //         "contracts": HashMap<Felt252, ContractState>,
+    //         "class_hash_to_compiled_class_hash": HashMap<Felt252, Felt252>,
+    //         "general_config": StarknetGeneralConfig,
+    //         "transactions": Vec<InternalTransaction>,
+    //         "block_hash": Felt252,
+    //     })).unwrap()
+    // }
 }
 
 #[serde_as]

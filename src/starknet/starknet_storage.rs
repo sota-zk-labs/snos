@@ -177,10 +177,10 @@ where
     S: Storage,
     H: HashFunctionType,
 {
-    previous_tree: PatriciaTree,
-    expected_updated_root: Felt252,
-    ongoing_storage_changes: HashMap<TreeIndex, Felt252>,
-    ffc: FactFetchingContext<S, H>,
+    pub(crate) previous_tree: PatriciaTree,
+    pub(crate) expected_updated_root: Felt252,
+    pub(crate) ongoing_storage_changes: HashMap<TreeIndex, Felt252>,
+    pub(crate) ffc: FactFetchingContext<S, H>,
 }
 
 impl<S, H> OsSingleStarknetStorage<S, H>

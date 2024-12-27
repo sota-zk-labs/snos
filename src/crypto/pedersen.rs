@@ -1,8 +1,9 @@
+use serde::Serialize;
 use starknet_crypto::{pedersen_hash, FieldElement};
 
 use crate::storage::storage::{Hash, HashFunctionType};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct PedersenHash;
 
 impl HashFunctionType for PedersenHash {

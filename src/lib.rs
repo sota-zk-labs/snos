@@ -1,12 +1,15 @@
+use std::collections::HashMap;
 use std::fs;
 
 use blockifier::context::BlockContext;
 use cairo_vm::cairo_run::CairoRunConfig;
+use cairo_vm::Felt252;
 use cairo_vm::types::layout_name::LayoutName;
 use cairo_vm::types::program::Program;
 use cairo_vm::vm::errors::vm_exception::VmException;
 use cairo_vm::vm::runners::cairo_pie::CairoPie;
 use cairo_vm::vm::runners::cairo_runner::CairoRunner;
+use serde_json::{json, Value};
 use error::SnOsError;
 use execution::deprecated_syscall_handler::DeprecatedOsSyscallHandlerWrapper;
 use execution::helper::ExecutionHelperWrapper;
@@ -16,6 +19,7 @@ use crate::execution::syscall_handler::OsSyscallHandlerWrapper;
 use crate::hints::types::{PatriciaSkipValidationRunner, PatriciaTreeMode};
 use crate::hints::vars;
 use crate::io::input::StarknetOsInput;
+use crate::starkware_utils::commitment_tree::base_types::TreeIndex;
 
 mod cairo_types;
 pub mod config;
@@ -35,8 +39,38 @@ pub fn run_os(
     layout: LayoutName,
     os_input: StarknetOsInput,
     block_context: BlockContext,
-    execution_helper: ExecutionHelperWrapper,
+    mut execution_helper: ExecutionHelperWrapper,
 ) -> Result<(CairoPie, StarknetOsOutput), SnOsError> {
+    fs::write("os_input.json", serde_json::to_string_pretty(&os_input).unwrap()).unwrap();
+    fs::write("block_context.json", serde_json::to_string_pretty(&block_context).unwrap()).unwrap();
+    let ex = execution_helper.execution_helper.clone();
+    let mut ex = ex.try_read().unwrap();
+    fs::write("tx_execution_infos.json", serde_json::to_string_pretty(&ex.tx_execution_info_iter.as_slice()).unwrap()).unwrap();
+
+    let mut storage_by_address: HashMap<Felt252, Value> = HashMap::new();
+    for (k, v) in ex.storage_by_address.clone() {
+        let mut storage = HashMap::new();
+        for (a, b) in &v.ffc.storage.try_lock().unwrap().clone().db {
+            storage.insert(hex::encode(a), hex::encode(b));
+        }
+        let previous_tree = json!({
+            "height": v.previous_tree.height,
+            "root": hex::encode(v.previous_tree.root.0),
+        });
+        storage_by_address.insert(k, json!({
+            "previous_tree": previous_tree,
+            "expected_updated_root": v.expected_updated_root.to_string(),
+            "ongoing_storage_changes": v.ongoing_storage_changes,
+            "ffc": {
+                "storage": storage
+            },
+        }));
+    }
+    fs::write("storage_by_address.json", serde_json::to_string_pretty(&storage_by_address).unwrap()).unwrap();
+
+    fs::write("old_block_number_and_hash.json", serde_json::to_string_pretty(&ex.old_block_number_and_hash).unwrap()).unwrap();
+    // fs::write("tx_execution_infos.json", serde_json::to_string_pretty(&ex.tx_execution_info_iter.as_slice()).unwrap()).unwrap();
+
     // Init CairoRunConfig
     let cairo_run_config = CairoRunConfig { layout, relocate_mem: true, trace_enabled: true, ..Default::default() };
     let allow_missing_builtins = cairo_run_config.allow_missing_builtins.unwrap_or(false);
@@ -97,8 +131,6 @@ pub fn run_os(
     // Prepare and check expected output.
     let os_output = StarknetOsOutput::from_run(&cairo_runner.vm)?;
 
-    log::debug!("output: {}", serde_json::to_string_pretty(&os_output).unwrap());
-
     cairo_runner.vm.verify_auto_deductions().map_err(|e| SnOsError::Runner(e.into()))?;
     cairo_runner.read_return_values(allow_missing_builtins).map_err(|e| SnOsError::Runner(e.into()))?;
     cairo_runner.relocate(cairo_run_config.relocate_mem).map_err(|e| SnOsError::Runner(e.into()))?;
@@ -106,5 +138,7 @@ pub fn run_os(
     // Parse the Cairo VM output
     let pie = cairo_runner.get_cairo_pie().map_err(|e| SnOsError::PieParsing(format!("{e}")))?;
 
+    pie.write_zip_file("cairo_pie.zip".as_ref())?;
+    fs::write("os_output.json", serde_json::to_string_pretty(&os_output).unwrap()).unwrap();
     Ok((pie, os_output))
 }
